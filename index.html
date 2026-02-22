@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Kids Apps Launcher</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">アプリ ランチャー</div>
+    <input id="q" class="search" type="search" placeholder="検索…" autocomplete="off" />
+  </header>
+
+  <main>
+    <div id="grid" class="grid"></div>
+  </main>
+
+  <script>
+    // まずはここに「旧リポのURL」を並べてテストします
+    const apps = [
+      // 例）
+      // { id: "artikel", title: "冠詞ドリル", desc: "der/den/dem", url: "https://<user>.github.io/artikel-drill/" },
+      // { id: "verb1", title: "動詞ドリル Phase1", desc: "規則動詞", url: "https://<user>.github.io/verb_drill/" },
+      // { id: "wort", title: "語彙ドリル", desc: "単語", url: "https://<user>.github.io/deutsch_wortschatz/" },
+    ];
+
+    const grid = document.getElementById("grid");
+    const q = document.getElementById("q");
+
+    function render(list){
+      grid.innerHTML = "";
+      for (const a of list){
+        const el = document.createElement("a");
+        el.className = "card";
+        el.href = a.url;
+        el.target = "_self"; // 同じタブで遷移（iPad運用で扱いやすい）
+        el.rel = "noopener";
+
+        el.innerHTML = `
+          <div class="cardTitle">${escapeHtml(a.title)}</div>
+          <div class="cardDesc">${escapeHtml(a.desc ?? "")}</div>
+        `;
+        grid.appendChild(el);
+      }
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, c => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+      }[c]));
+    }
+
+    q.addEventListener("input", () => {
+      const key = q.value.trim().toLowerCase();
+      if (!key) return render(apps);
+      render(apps.filter(a =>
+        (a.title || "").toLowerCase().includes(key) ||
+        (a.desc || "").toLowerCase().includes(key)
+      ));
+    });
+
+    render(apps);
+  </script>
+</body>
+</html>
