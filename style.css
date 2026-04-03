@@ -52,6 +52,11 @@ main{
   gap: 12px;
 }
 
+.panel{
+  display: grid;
+  gap: 8px;
+}
+
 .card{
   display:block;
   padding: 14px 14px 16px;
@@ -71,6 +76,36 @@ main{
 
 .cardDesc{
   font-size: 13px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.studyRow{
+  display: grid;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.studyButton{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.studyButton.isDone{
+  background: #1f7a47;
+  border-color: rgba(255,255,255,.18);
+}
+
+.studyMeta{
+  font-size: 12px;
   color: var(--muted);
   line-height: 1.35;
 }

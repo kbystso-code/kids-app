@@ -57,24 +57,103 @@
   }
   ]
 
+    const STORAGE_KEY = "kids-app-study-log-v1";
     const grid = document.getElementById("grid");
     const q = document.getElementById("q");
+    let studyLog = loadStudyLog();
 
     function render(list){
       grid.innerHTML = "";
       for (const a of list){
-        const el = document.createElement("a");
-        el.className = "card";
-        el.href = a.url;
-        el.target = "_self"; // 同じタブで遷移（iPad運用で扱いやすい）
-        el.rel = "noopener";
+        const today = getTodayKey();
+        const studiedToday = isStudiedToday(a.id);
+        const panel = document.createElement("article");
+        panel.className = "panel";
 
-        el.innerHTML = `
-          <div class="cardTitle">${escapeHtml(a.title)}</div>
-          <div class="cardDesc">${escapeHtml(a.desc ?? "")}</div>
+        panel.innerHTML = `
+          <a class="card" href="${escapeHtml(a.url)}" target="_self" rel="noopener">
+            <div class="cardTitle">${escapeHtml(a.title)}</div>
+            <div class="cardDesc">${escapeHtml(a.desc ?? "")}</div>
+          </a>
+          <div class="studyRow">
+            <button
+              class="studyButton${studiedToday ? " isDone" : ""}"
+              type="button"
+              data-app-id="${escapeHtml(a.id)}"
+              aria-pressed="${studiedToday ? "true" : "false"}"
+            >
+              ${studiedToday ? "今日は勉強した" : "今日やった"}
+            </button>
+            <div class="studyMeta">記録日: ${today} / ${studiedToday ? "学習済み" : "未学習"}</div>
+          </div>
         `;
-        grid.appendChild(el);
+        grid.appendChild(panel);
       }
+    }
+
+    grid.addEventListener("click", (event) => {
+      const button = event.target.closest(".studyButton");
+      if (!button) return;
+
+      const appId = button.dataset.appId;
+      if (!appId) return;
+
+      toggleStudyStatus(appId);
+    });
+
+    function toggleStudyStatus(appId){
+      const today = getTodayKey();
+      studyLog[today] ??= {};
+      studyLog[today][appId] = !studyLog[today][appId];
+
+      if (!studyLog[today][appId]) {
+        delete studyLog[today][appId];
+      }
+
+      if (Object.keys(studyLog[today]).length === 0) {
+        delete studyLog[today];
+      }
+
+      saveStudyLog();
+      applySearch();
+    }
+
+    function isStudiedToday(appId){
+      const today = getTodayKey();
+      return Boolean(studyLog[today]?.[appId]);
+    }
+
+    function getTodayKey(){
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function loadStudyLog(){
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    function saveStudyLog(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(studyLog));
+    }
+
+    function applySearch(){
+      const key = q.value.trim().toLowerCase();
+      if (!key) {
+        render(apps);
+        return;
+      }
+
+      render(apps.filter(a =>
+        (a.title || "").toLowerCase().includes(key) ||
+        (a.desc || "").toLowerCase().includes(key)
+      ));
     }
 
     function escapeHtml(s){
@@ -83,14 +162,7 @@
       }[c]));
     }
 
-    q.addEventListener("input", () => {
-      const key = q.value.trim().toLowerCase();
-      if (!key) return render(apps);
-      render(apps.filter(a =>
-        (a.title || "").toLowerCase().includes(key) ||
-        (a.desc || "").toLowerCase().includes(key)
-      ));
-    });
+    q.addEventListener("input", applySearch);
 
     render(apps);
   </script>
