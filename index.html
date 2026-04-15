@@ -58,6 +58,7 @@
   ]
 
     const STORAGE_KEY = "kids-app-study-log-v1";
+    const PROGRESS_KEY = "kids-app-study-progress-v1";
     const grid = document.getElementById("grid");
     const q = document.getElementById("q");
     let studyLog = loadStudyLog();
@@ -66,9 +67,19 @@
       grid.innerHTML = "";
       for (const a of list){
         const today = getTodayKey();
-        const studiedToday = isStudiedToday(a.id);
+        const studyRecord = getStudyRecord(a.id);
+        const studiedToday = Boolean(studyRecord);
         const panel = document.createElement("article");
         panel.className = "panel";
+        const buttonLabel = studiedToday
+          ? `
+              <span class="studyButtonLabel">今日の学習完了</span>
+              <span class="studyButtonDetail">${escapeHtml(formatStudyDate(studyRecord.date))} ・ 正解 ${escapeHtml(formatCorrectCount(studyRecord.correct))}</span>
+            `
+          : `<span class="studyButtonLabel">今日やった</span>`;
+        const metaText = studiedToday
+          ? "もう一度押すと今日の記録を取り消します"
+          : `記録日: ${today} / 未学習`;
 
         panel.innerHTML = `
           <a class="card" href="${escapeHtml(a.url)}" target="_self" rel="noopener">
@@ -82,9 +93,9 @@
               data-app-id="${escapeHtml(a.id)}"
               aria-pressed="${studiedToday ? "true" : "false"}"
             >
-              ${studiedToday ? "今日は勉強した" : "今日やった"}
+              ${buttonLabel}
             </button>
-            <div class="studyMeta">記録日: ${today} / ${studiedToday ? "学習済み" : "未学習"}</div>
+            <div class="studyMeta">${escapeHtml(metaText)}</div>
           </div>
         `;
         grid.appendChild(panel);
@@ -104,10 +115,16 @@
     function toggleStudyStatus(appId){
       const today = getTodayKey();
       studyLog[today] ??= {};
-      studyLog[today][appId] = !studyLog[today][appId];
 
-      if (!studyLog[today][appId]) {
+      if (studyLog[today][appId]) {
         delete studyLog[today][appId];
+      } else {
+        const progress = getTodayProgress(appId);
+        studyLog[today][appId] = {
+          date: today,
+          correct: normalizeCorrectCount(progress?.correct),
+          doneAt: new Date().toISOString()
+        };
       }
 
       if (Object.keys(studyLog[today]).length === 0) {
@@ -119,8 +136,30 @@
     }
 
     function isStudiedToday(appId){
+      return Boolean(getStudyRecord(appId));
+    }
+
+    function getStudyRecord(appId){
       const today = getTodayKey();
-      return Boolean(studyLog[today]?.[appId]);
+      const value = studyLog[today]?.[appId];
+      if (!value) return null;
+      if (typeof value === "object") {
+        return {
+          date: value.date || today,
+          correct: normalizeCorrectCount(value.correct)
+        };
+      }
+      const progress = getTodayProgress(appId);
+      return {
+        date: today,
+        correct: progress ? normalizeCorrectCount(progress.correct) : null
+      };
+    }
+
+    function getTodayProgress(appId){
+      const today = getTodayKey();
+      const progress = loadStudyProgress();
+      return progress[today]?.[appId] || null;
     }
 
     function getTodayKey(){
@@ -139,8 +178,31 @@
       }
     }
 
+    function loadStudyProgress(){
+      try {
+        return JSON.parse(localStorage.getItem(PROGRESS_KEY) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
     function saveStudyLog(){
       localStorage.setItem(STORAGE_KEY, JSON.stringify(studyLog));
+    }
+
+    function normalizeCorrectCount(value){
+      const num = Number(value);
+      if (!Number.isFinite(num)) return 0;
+      return Math.max(0, Math.floor(num));
+    }
+
+    function formatCorrectCount(value){
+      return value === null ? "-" : String(normalizeCorrectCount(value));
+    }
+
+    function formatStudyDate(value){
+      if (!value) return getTodayKey().replace(/-/g, "/");
+      return String(value).replace(/-/g, "/");
     }
 
     function applySearch(){
