@@ -69,6 +69,10 @@
         const today = getTodayKey();
         const studyRecord = getStudyRecord(a.id);
         const studiedToday = Boolean(studyRecord);
+        const monthlyCounts = getMonthlyStudyCounts(a.id);
+        const monthlySummary = monthlyCounts.length
+          ? monthlyCounts.map(item => `${escapeHtml(item.label)}：${escapeHtml(item.count)}回`).join("<br>")
+          : "月別記録なし";
         const panel = document.createElement("article");
         panel.className = "panel";
         const buttonLabel = studiedToday
@@ -96,6 +100,7 @@
               ${buttonLabel}
             </button>
             <div class="studyMeta">${escapeHtml(metaText)}</div>
+            <div class="studyMonthly">${monthlySummary}</div>
           </div>
         `;
         grid.appendChild(panel);
@@ -160,6 +165,37 @@
       const today = getTodayKey();
       const progress = loadStudyProgress();
       return progress[today]?.[appId] || null;
+    }
+
+    function getMonthlyStudyCounts(appId){
+      const counts = {};
+
+      for (const [dateKey, dailyRecord] of Object.entries(studyLog)) {
+        if (!dailyRecord || !dailyRecord[appId]) continue;
+
+        const monthKey = getMonthKey(dateKey);
+        if (!monthKey) continue;
+
+        counts[monthKey] = (counts[monthKey] || 0) + 1;
+      }
+
+      return Object.entries(counts)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([monthKey, count]) => ({
+          label: formatMonthLabel(monthKey),
+          count
+        }));
+    }
+
+    function getMonthKey(dateKey){
+      const match = String(dateKey).match(/^(\d{4})-(\d{2})-\d{2}$/);
+      if (!match) return "";
+      return `${match[1]}-${match[2]}`;
+    }
+
+    function formatMonthLabel(monthKey){
+      const [, month] = String(monthKey).split("-");
+      return `${Number(month)}月`;
     }
 
     function getTodayKey(){
